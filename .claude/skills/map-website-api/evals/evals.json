@@ -1,0 +1,44 @@
+{
+  "skill_name": "map-website-api",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Map the API calls for https://news.ycombinator.com — I want to understand what backend calls get made when I load the homepage, click on a story link, and vote on a post. Output the findings as a markdown report.",
+      "expected_output": "A markdown report identifying: (1) the rendering architecture (SSR/MPA), (2) that playwright-cli network returns empty for page loads on HN because it's pure SSR, (3) that voting uses new Image().src side-channel requests rather than XHR/Fetch, (4) HN search redirects to hn.algolia.com which is a separate SPA target, (5) a structured markdown with Data Endpoints, Invisible/Non-XHR Patterns, and Subdomain SPAs sections.",
+      "files": [],
+      "expectations": [
+        "The report identifies HN as SSR/MPA architecture",
+        "The report notes that playwright-cli network logs are empty for page loads (SSR)",
+        "The report mentions the new Image().src voting pattern as an invisible/non-XHR request",
+        "The report identifies hn.algolia.com as a separate SPA subdomain for search",
+        "The output is formatted as a markdown document with sections for Data Endpoints and Invisible/Non-XHR Patterns"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to reverse-engineer the API surface of https://www.reddit.com. Map the data-fetching API calls for: loading the homepage feed, scrolling to load more posts, and opening a post to view comments. Ignore analytics and tracking calls. Output as markdown.",
+      "expected_output": "A markdown report for Reddit identifying: (1) hybrid SSR architecture (Next.js), (2) svc/shreddit/* or similar API endpoints for feed data, (3) GraphQL or REST endpoints with operationName discriminators where relevant, (4) scroll-triggered pagination endpoints, (5) comment loading endpoints, (6) noise filtered out (shreddit/events, recaptcha, etc.), (7) structured markdown output.",
+      "files": [],
+      "expectations": [
+        "The report identifies Reddit as hybrid/SSR architecture",
+        "The report documents feed loading API endpoints",
+        "The report documents comment-loading API endpoints",
+        "Analytics and tracking calls are filtered out (not listed in data endpoints)",
+        "The output is a structured markdown with Method/Endpoint/Purpose columns"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Map the API calls for https://github.com — specifically what happens when I: load a repository page, view an open pull request, and switch between the Files Changed and Conversation tabs. I'm interested in the data APIs only, not assets. Output as markdown.",
+      "expected_output": "A markdown report for GitHub identifying: (1) hybrid SSR architecture, (2) deferred section/fragment pattern (multiple parallel GETs to /page_data/* sub-paths after page load), (3) GET /_graphql?body=... persisted GraphQL pattern with persistedQueryName discriminator, (4) GET /_global-navigation/payloads.json?type= nav menu loading pattern, (5) PR-specific endpoints like /pulls/{id}/page_data/diffstat, /page_data/merge_box, etc., (6) structured markdown output.",
+      "files": [],
+      "expectations": [
+        "The report identifies the deferred section/fragment pattern (multiple parallel GETs to sub-paths)",
+        "The report documents the GET-based persisted GraphQL pattern with persistedQueryName discriminator",
+        "The report documents the global navigation endpoint with type= query param discriminator",
+        "The output normalizes IDs to {id} or {owner}/{repo} placeholders in URL patterns",
+        "The output is a structured markdown with a URL Pattern Summary section"
+      ]
+    }
+  ]
+}

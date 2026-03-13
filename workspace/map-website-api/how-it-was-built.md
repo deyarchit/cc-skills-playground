@@ -29,12 +29,12 @@ Reflect on how you approached this problem. Think about the reusable patterns of
   Capture all your thoughts in a document. I will later use that document to create a generic skill that
   can be used to perform this kind of analysis on other websites.
 
-  Create network-interception-reflection.md
+  Create reflection.md in the skill workspace (workspace/map-website-api/reflection.md)
 ```
 
 3. Refine learnings
 ```
-Update @network-interception-reflection.md with your learnings from this session working with
+Update @workspace/map-website-api/reflection.md with your learnings from this session working with
   Hacker News.
 
   Stay focused on reusable knowledge — we don't want to bloat this guide with site-specific patterns.
@@ -48,7 +48,7 @@ Update @network-interception-reflection.md with your learnings from this session
 Goal: Using the learnings from previous sessions, build the new skill called map-website-api which will use playwright-cli skill to perform website api analysis for most commonly used flows.
 
 ```
-/skill-creator Using the knowledge captured in @network-interception-reflection.md, create a skill that can be used to:
+/skill-creator Using the knowledge captured in @workspace/map-website-api/reflection.md, create a skill that can be used to:
 
   Given a website:
   1. Capture API calls triggered during the most common navigational flows

@@ -46,9 +46,12 @@ All scripts live in `.claude/skills/map-website-api/scripts/`. Use them via `bas
 | `drain.sh` | Drain the network buffer before an action |
 | `capture.sh [label]` | Capture and filter network calls after an action |
 | `filter_noise.sh` | Pipeable noise filter (used internally by capture.sh) |
+| `fetch_blocklist.sh` | One-time setup: download HaGeZi ad domain list to `~/.claude/cache/` |
 | `detect_architecture.sh <url>` | Auto-detect SSR vs SPA + scan for subdomain SPAs |
 | `inspect_ssr_requests.sh` | SSR fallback: find fetch/Image/XHR patterns in the JS bundle |
 | `inspect_post_bodies.js` | run-code template for capturing GraphQL operationName etc. |
+
+> **One-time setup for best ad filtering:** Run `bash $S/fetch_blocklist.sh` once before your first session. This downloads the HaGeZi Pro blocklist (~300k community-maintained ad domains) to `~/.claude/cache/` and enables pass-2 filtering in `filter_noise.sh`. The cache auto-refreshes after 7 days. Completely optional — the skill works without it using the built-in regex patterns.
 
 Reference path shorthand used below: `$S` = `.claude/skills/map-website-api/scripts`
 
@@ -161,6 +164,8 @@ playwright-cli eval "document.querySelector('{last-item-selector}').scrollIntoVi
 
 When an endpoint fires repeatedly across different actions, identify its discriminating signal before recording it. Same URL ≠ same operation.
 
+> **Trigger rule:** If you see 3+ POSTs to the same URL (e.g. `POST /graphql` or `POST nexus-gateway-prod.media.yahoo.com/`) across any single capture window, stop and use `inspect_post_bodies.js` to find the operationName before continuing. Recording "POST /graphql — various" without the discriminator is the most common way this analysis goes wrong.
+
 | Endpoint type | What to check | Signal field |
 |---------------|--------------|-------------|
 | POST GraphQL | Request body | `operationName` |
@@ -270,4 +275,12 @@ playwright-cli close
 - **Run `detect_architecture.sh` first.** It tells you which subsequent steps apply and spots subdomain SPAs before you waste time on the wrong domain.
 - **On SSR sites, don't keep navigating — interact instead.** Once you see `[empty]` for page loads, stop navigating and switch to in-page interactions (search box, hover, media click, filters).
 - **Don't stop at the URL for overloaded endpoints.** Record the discriminating signal or the mapping is misleading.
-- **Multi-line `playwright-cli eval` strings cause serialization errors.** Always wrap JS in `() => { ... return ...; }` as a single-line string. Multi-line eval without this wrapper fails with `page._evaluateFunction: Passed function is not well-serializable!`
+- **When capture output is still large after filtering, grep for signal.** Even with noise filtering, high-traffic sites accumulate telemetry and ad calls. Rather than reading the full output, grep for what matters: `bash $S/capture.sh "label" 2>&1 | grep -E "your-domain|api|query|graphql"`. The filter already removes most ad noise; this final grep narrows to data APIs on the domains you care about.
+- **`playwright-cli eval` only accepts simple expressions or a `() => {}` arrow function — never an IIFE.** The following patterns work and fail:
+  - ✅ Simple expression: `playwright-cli eval "document.querySelectorAll('input').length"`
+  - ✅ String concat: `playwright-cli eval "document.querySelector('input').name + '|' + document.querySelector('input').type"`
+  - ✅ Arrow function wrapper (for anything complex): `playwright-cli eval "() => { const items = Array.from(document.querySelectorAll('input')); return items.map(i => i.name).join(','); }"`
+  - ❌ IIFE — always fails: `playwright-cli eval "(() => { return ...; })()"`
+  - ❌ Complex expression with nested closures — fails: `playwright-cli eval "JSON.stringify(Array.from(document.querySelectorAll('input')).map(i => ({name: i.name})))"`
+
+  The rule: for anything beyond a simple property access, use the `() => { ... return value; }` wrapper (no trailing `()`). Never use `JSON.stringify(expr.map(x => ...))` as a top-level expression — put it inside the arrow function body instead.

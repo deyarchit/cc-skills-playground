@@ -1,25 +1,20 @@
-# Browser Tools
+# Claude Code Skills Playground
 
-A collection of tools and skills for interacting with and automating web browsers using AI.
+A workbench for building, refining, and composing [Claude Code](https://claude.ai/code) skills.
 
-## Overview
-
-This repo explores approaches to browser automation, API mapping, and web interaction — building reusable patterns for tasks like:
-
-- Navigating and scraping web pages
-- Mapping website API calls and network requests
-- Filling forms and automating browser workflows
-- Building Claude skills for browser-based tasks
-
-## Tools & Skills
+## Skills
 
 | Name | Description |
 |------|-------------|
-| `map-website-api` | Maps which user interactions on a website trigger which backend API calls, producing a structured report of the site's API surface |
+| `map-website-api` | Maps which user interactions on a website trigger which backend API calls, producing a structured report of the site's API surface. [How it was built](workspace/map-website-api/how-it-was-built.md) |
 
 ## Setup
 
-Install Playwright CLI:
+**1. Enable the `skill-creator` plugin**
+
+The `skill-creator` Claude Code plugin is required for building and refining skills in this repo. Enable it in your Claude Code settings before working on skills.
+
+**2. Install Playwright CLI:**
 
 ```bash
 npm install -g @playwright/cli@latest

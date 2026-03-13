@@ -5,5 +5,6 @@
 # Usage:
 #   bash drain.sh
 
-playwright-cli network > /dev/null 2>&1
+sleep 2                                   # let in-flight calls from prior action settle
+playwright-cli network > /dev/null 2>&1   # read + clear the buffer
 echo "[drained]"

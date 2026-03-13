@@ -12,9 +12,11 @@ allowed-tools: Bash(playwright-cli:*), Bash(bash:*)
 
 Given a target website URL, systematically capture the data-fetching API calls triggered by the most common navigational flows, then output a clean markdown report. Focus exclusively on calls that bring content/data to the page — ignore assets (fonts, images, CSS, JS bundles).
 
-## Before you start — ask the user
+## Before you start — headed or headless?
 
-**Always ask this before opening the browser:**
+If the user's request already specifies headed or headless (e.g. "in a headed browser", "headless"), skip this question and use that preference directly.
+
+Otherwise ask:
 
 > "Should I run this with a visible browser window (headed) or in the background (headless)?
 > Headed is recommended — you can watch what's happening and verify the interactions are correct.
@@ -276,11 +278,30 @@ playwright-cli close
 - **On SSR sites, don't keep navigating — interact instead.** Once you see `[empty]` for page loads, stop navigating and switch to in-page interactions (search box, hover, media click, filters).
 - **Don't stop at the URL for overloaded endpoints.** Record the discriminating signal or the mapping is misleading.
 - **When capture output is still large after filtering, grep for signal.** Even with noise filtering, high-traffic sites accumulate telemetry and ad calls. Rather than reading the full output, grep for what matters: `bash $S/capture.sh "label" 2>&1 | grep -E "your-domain|api|query|graphql"`. The filter already removes most ad noise; this final grep narrows to data APIs on the domains you care about.
-- **`playwright-cli eval` only accepts simple expressions or a `() => {}` arrow function — never an IIFE.** The following patterns work and fail:
-  - ✅ Simple expression: `playwright-cli eval "document.querySelectorAll('input').length"`
-  - ✅ String concat: `playwright-cli eval "document.querySelector('input').name + '|' + document.querySelector('input').type"`
-  - ✅ Arrow function wrapper (for anything complex): `playwright-cli eval "() => { const items = Array.from(document.querySelectorAll('input')); return items.map(i => i.name).join(','); }"`
-  - ❌ IIFE — always fails: `playwright-cli eval "(() => { return ...; })()"`
-  - ❌ Complex expression with nested closures — fails: `playwright-cli eval "JSON.stringify(Array.from(document.querySelectorAll('input')).map(i => ({name: i.name})))"`
+- **Some endpoints appear in every capture — that's expected, not a bug.** Sites with real-time widgets (config resolvers, weather sidebars, finance tickers, user-profile pings) poll on every page. These will show up in every flow's capture regardless of what you triggered. Don't document them as specific to a single flow — put them in a "Shared / Cross-page" section instead. If they're cluttering a per-flow capture, use grep to focus: `bash $S/capture.sh "label" 2>&1 | grep -vE "config.*resolver|recoitems/weather|finance/charts|service/msn/user"`.
+- **`playwright-cli eval` serialization rules — three things that will burn you:**
 
-  The rule: for anything beyond a simple property access, use the `() => { ... return value; }` wrapper (no trailing `()`). Never use `JSON.stringify(expr.map(x => ...))` as a top-level expression — put it inside the arrow function body instead.
+  1. **No IIFEs.** `playwright-cli eval "(() => { ... })()"` always fails.
+  2. **No nested arrow functions.** Even inside a valid `() => {}` wrapper, using `.filter(a => ...)`, `.map(x => ...)`, or any callback expressed as an arrow function triggers `Error: page._evaluateFunction: Passed function is not well-serializable!`. The outer arrow wrapper is fine; the inner ones are not.
+  3. **No complex top-level expressions.** `JSON.stringify(Array.from(...).map(i => ...))` as the whole argument fails — put it inside a wrapper body instead.
+
+  **Working patterns:**
+  - ✅ Simple property: `playwright-cli eval "document.querySelectorAll('input').length"`
+  - ✅ String concat: `playwright-cli eval "document.querySelector('input').name + '|' + document.querySelector('input').type"`
+  - ✅ Arrow wrapper, no inner arrows: `playwright-cli eval "() => { const items = Array.from(document.querySelectorAll('input')); return items.map(i => i.name).join(','); }"`
+  - ✅ Use a `for` loop when you need filtering: see example below
+
+  **Broken pattern and its fix:**
+  ```bash
+  # ❌ Fails — .filter() callback is a nested arrow function:
+  playwright-cli eval "() => { const links = Array.from(document.querySelectorAll('a')); return links.filter(a => a.href.includes('/news/')).map(a => a.href).join('\n'); }"
+  # Error: page._evaluateFunction: Passed function is not well-serializable!
+
+  # ✅ Fix — replace .filter()/.map() chains with a for-loop:
+  playwright-cli eval "() => { var out = []; var links = document.querySelectorAll('a'); for (var i = 0; i < links.length && out.length < 5; i++) { if (links[i].href.indexOf('/news/') > -1) out.push(links[i].href); } return out.join('\n'); }"
+
+  # ✅ Alternative fix — grep the snapshot file instead (often simpler):
+  grep "url:" .playwright-cli/page-*.yml | grep "/news/" | head -5
+  ```
+
+  The simplest fallback when you need to find links is always **grep the snapshot .yml** — it's faster than eval and has no serialization constraints.
